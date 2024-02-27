@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zombie Shooter Game</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background-color: #222;
+    }
+    canvas {
+      display: block;
+      background-color: #333;
+      margin: 20px auto;
+    }
+    button {
+      display: block;
+      margin: 20px auto;
+      padding: 10px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <button id="startButton">Start Game</button>
+    <input type="text" id="playerName" placeholder="Enter your name">
+    <script>
+      const canvas = document.getElementById('gameCanvas');
+      const ctx = canvas.getContext('2d');
+
+    const player = {
+      x: 50,
+      y: canvas.height / 2,
+      width: 50,
+      height: 50,
+      color: 'blue',
+      speed: 5
+    };
+
+    const zombies = [];
+    const bullets = [];
+    const healthPacks = [];
+    const weaponBoxes = [];
+
+    let score = 0;
+    let health = 100;
+    let gameRunning = false;
+  let gameStartTime;
+  let timer = 0;
+
+    const weapons = [
+      { name: 'Pistol', damage: 20 },
+      { name: 'Shotgun', damage: 40 },
+      { name: 'Machine Gun', damage: 10 }
+    ];
+
+    function startGame() {
+    const playerName = document.getElementById('playerName').value;
+    if (!playerName) {
+      alert('Введите ваше имя перед началом игры.');
+      return;
+    }
+
+    gameStartTime = new Date().getTime(); // Запуск таймера при начале игры
+    timer = 0; // Сброс таймера
+    gameRunning = true;
+    score = 0;
+    health = 100;
+    currentWeaponIndex = 0;
+    collectedWeapons = [0];
+    zombies.length = 0;
+    bullets.length = 0;
+    healthPacks.length = 0;
+    weaponBoxes.length = 0;
+
+    requestAnimationFrame(gameLoop);
+  }
+    function drawPlayer() {
+      ctx.fillStyle = player.color;
+      ctx.fillRect(player.x, player.y, player.width, player.height);
+    }
+
+    function drawZombies() {
+      zombies.forEach(zombie => {
+        ctx.fillStyle = 'green';
+        ctx.fillRect(zombie.x, zombie.y, zombie.width, zombie.height);
+      });
+    }
+
+    function drawBullets() {
+      bullets.forEach(bullet => {
+        ctx.fillStyle = 'red';
+        ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+      });
+    }
+
+    function drawHealthPacks() {
+      healthPacks.forEach(pack => {
+        ctx.fillStyle = 'yellow';
+        ctx.fillRect(pack.x, pack.y, pack.width, pack.height);
+      });
+    }
+
+    function drawWeaponBoxes() {
+      weaponBoxes.forEach(box => {
+        ctx.fillStyle = 'brown';
+        ctx.fillRect(box.x, box.y, box.width, box.height);
+      });
+    }
+
+    function drawScoreAndHealth() {
+      ctx.fillStyle = 'black';
+      ctx.font = '20px Arial';
+      ctx.fillText(`Score: ${score}`, 10, 30);
+      ctx.fillText(`Health: ${health}`, 10, 60);
+      ctx.fillText(`Time: ${timer}s`, 10, 90);
+      ctx.fillText(`Weapon: ${weapons[currentWeaponIndex].name}`, 10, 120);
+    }
+
+    function drawWeapons() {
+      collectedWeapons.forEach((weaponIndex, index) => {
+        ctx.fillStyle = 'white';
+        ctx.fillText(`${weapons[weaponIndex].name}`, canvas.width - 120, 30 + index * 30);
+      });
+    }
+
+    function drawGameOver() {
+      ctx.fillStyle = 'red';
+      ctx.font = '40px Arial';
+      ctx.fillText('Game Over', canvas.width / 2 - 100, canvas.height / 2);
+    }
+
+    function update() {
+    if (!gameRunning) return;
+
+
+      if (keys.ArrowUp && player.y > 0) player.y -= player.speed;
+      if (keys.ArrowDown && player.y < canvas.height - player.height) player.y += player.speed;
+      if (keys.ArrowLeft && player.x > 0) player.x -= player.speed;
+      if (keys.ArrowRight && player.x < canvas.width - player.width) player.x += player.speed;
+
+      canvas.addEventListener('mousedown', handleMouseDown);
+
+      function handleMouseDown(event) {
+        const angle = Math.atan2(
+          event.clientY - (player.y + player.height / 2),
+          event.clientX - (player.x + player.width / 2)
+        );
+
+        bullets.push({
+          x: player.x + player.width / 2,
+          y: player.y + player.height / 2,
+          width: 5,
+          height: 5,
+          speed: 10,
+          damage: weapons[currentWeaponIndex].damage,
+          dx: Math.cos(angle) * 10,
+          dy: Math.sin(angle) * 10
+        });
+      }
+
+      bullets.forEach(bullet => {
+        bullet.x += bullet.dx;
+        bullet.y += bullet.dy;
+
+        zombies.forEach(zombie => {
+          if (
+            bullet.x < zombie.x + zombie.width &&
+            bullet.x + bullet.width > zombie.x &&
+            bullet.y < zombie.y + zombie.height &&
+            bullet.y + bullet.height > zombie.y
+          ) {
+            zombies.splice(zombies.indexOf(zombie), 1);
+            bullets.splice(bullets.indexOf(bullet), 1);
+            score += 10;
+          }
+        });
+      });
+
+      zombies.forEach(zombie => {
+        zombie.x -= 2;
+
+        if (
+          player.x < zombie.x + zombie.width &&
+          player.x + player.width > zombie.x &&
+          player.y < zombie.y + zombie.height &&
+          player.y + player.height > zombie.y
+        ) {
+          zombies.splice(zombies.indexOf(zombie), 1);
+          health -= 10;
+        }
+      });
+
+      healthPacks.forEach(pack => {
+        pack.x -= 1;
+
+        if (
+          player.x < pack.x + pack.width &&
+          player.x + player.width > pack.x &&
+          player.y < pack.y + pack.height &&
+          player.y + player.height > pack.y
+        ) {
+          healthPacks.splice(healthPacks.indexOf(pack), 1);
+          health = Math.min(health + 20, 100);
+        }
+      });
+
+      weaponBoxes.forEach(box => {
+        if (
+          player.x < box.x + box.width &&
+          player.x + player.width > box.x &&
+          player.y < box.y + box.height &&
+          player.y + player.height > box.y
+        ) {
+          weaponBoxes.splice(weaponBoxes.indexOf(box), 1);
+          spawnRandomWeapon();
+        }
+      });
+
+      if (Math.random() < 0.02) {
+        zombies.push({
+          x: canvas.width,
+          y: Math.random() * canvas.height,
+          width: 50,
+          height: 50
+        });
+      }
+
+      if (Math.random() < 0.01) {
+        healthPacks.push({
+          x: canvas.width,
+          y: Math.random() * canvas.height,
+          width: 30,
+          height: 30
+        });
+      }
+
+      if (Math.random() < 0.005) {
+        spawnWeaponBox();
+      }
+
+      bullets.forEach(bullet => {
+        if (
+          bullet.x < 0 ||
+          bullet.y < 0 ||
+          bullet.x > canvas.width ||
+          bullet.y > canvas.height
+        ) {
+          bullets.splice(bullets.indexOf(bullet), 1);
+        }
+      });
+
+      zombies.forEach(zombie => {
+        if (zombie.x + zombie.width < 0) {
+          zombies.splice(zombies.indexOf(zombie), 1);
+        }
+      });
+
+      healthPacks.forEach(pack => {
+        if (pack.x + pack.width < 0) {
+          healthPacks.splice(healthPacks.indexOf(pack), 1);
+        }
+      });
+      const currentTime = new Date().getTime();
+    timer = Math.floor((currentTime - gameStartTime) / 1000);
+
+    if (health <= 0 || timer >= 60) { // Изменение условия завершения игры
+      endGame();
+    }
+  }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      drawPlayer();
+      drawZombies();
+      drawBullets();
+      drawHealthPacks();
+      drawWeapons();
+      drawWeaponBoxes();
+      drawScoreAndHealth();
+
+      if (health <= 0 || timer === 0) {
+        drawGameOver();
+      }
+    }
+
+    function gameLoop() {
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    const keys = {};
+    window.addEventListener('keydown', e => keys[e.key] = true);
+    window.addEventListener('keyup', e => keys[e.key] = false);
+
+    const startButton = document.getElementById('startButton');
+    startButton.addEventListener('click', startGame);
+
+    function startGame() {
+    const playerName = document.getElementById('playerName').value;
+    if (!playerName) {
+      alert('Введите ваше имя перед началом игры.');
+      return;
+    }
+
+    gameStartTime = new Date().getTime(); // Updated line
+
+    gameRunning = true;
+    score = 0;
+    health = 100;
+    timer = 0;
+    currentWeaponIndex = 0;
+    collectedWeapons = [0];
+    zombies.length = 0;
+    bullets.length = 0;
+    healthPacks.length = 0;
+    weaponBoxes.length = 0;
+
+    requestAnimationFrame(gameLoop);
+  }
+
+    function endGame() {
+      gameRunning = false;
+      alert(`Игра окончена! Ваш счет: ${score}`);
+      startGame();
+    }
+
+    function spawnRandomWeapon() {
+      const randomWeaponIndex = Math.floor(Math.random() * weapons.length);
+      collectedWeapons.push(randomWeaponIndex);
+    }
+
+    function spawnWeaponBox() {
+      weaponBoxes.push({
+        x: canvas.width,
+        y: Math.random() * canvas.height,
+        width: 30,
+        height: 30
+      });
+    }
+  </script>
+</body>
+</html>
